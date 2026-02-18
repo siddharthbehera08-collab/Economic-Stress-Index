@@ -1,36 +1,51 @@
 # Economic Stress Index (ESI)
 
-Python-based analysis of India's unemployment trends from 1991 to 2024 using World Bank data. This project demonstrates clean data engineering practices with modular code organization, standardized data pipelines, and professional visualizations.
+Python-based analysis of India's key economic stress indicators from 1991 to 2024 using World Bank data. The project demonstrates clean data engineering with modular code, standardised pipelines, and professional visualisations.
 
 ## 📊 Project Overview
 
-This project analyzes economic stress indicators for India, focusing on unemployment rates over a 33-year period. The analysis includes:
-- Data loading and preprocessing
-- Time-series transformation and filtering
-- Statistical analysis (min/max identification)
-- Professional visualizations (line plots and bar charts)
+This project analyses five economic indicators for India and combines them into a **Composite Economic Stress Index**:
+
+| Indicator | Source | Column |
+|-----------|--------|--------|
+| Consumer Price Inflation | World Bank FP.CPI.TOTL.ZG | `inflation_rate` |
+| Food Inflation (proxy) | Derived from CPI | `food_inflation_rate` |
+| Unemployment Rate | World Bank SL.UEM.TOTL.ZS | `unemployment_rate` |
+| GDP Growth Rate | World Bank NY.GDP.MKTP.KD.ZG | `gdp_growth_rate` |
+| Lending Interest Rate | World Bank FR.INR.LEND | `interest_rate` |
+
+### Why These Indicators Matter
+
+- **Inflation & Food Inflation**: High inflation erodes purchasing power, with food inflation disproportionately affecting lower-income households.
+- **Unemployment**: A key measure of labor market distress and economic underperformance.
+- **GDP Growth**: Serves as the baseline for economic health; negative growth indicates recessionary pressure.
+- **Interest Rates**: High rates increase borrowing costs, slowing down investment and consumption.
+
+Together, these metrics provide a comprehensive view of the economic pressure facing the Indian economy.
 
 ## 🗂️ Project Structure
 
 ```
 ESI/
 ├─ data/
-│  ├─ raw/               # Raw CSV data files
-│  │  ├─ inflation.csv
-│  │  ├─ unemployment.csv
-│  ├─ processed/         # Cleaned/processed data outputs
+│  └─ raw/                     # Raw CSV data files (World Bank format)
+│     ├─ inflation.csv
+│     ├─ unemployment.csv
+│     ├─ gdp_growth.csv
+│     ├─ food_inflation.csv
+│     └─ interest_rates.csv
 ├─ outputs/
-│  ├─ plots/             # Generated visualizations
-│  ├─ tables/            # Generated tables/CSVs
+│  ├─ plots/                   # Generated visualisations (PNG)
+│  └─ tables/                  # Merged indicator table (CSV)
 ├─ src/
-│  ├─ __init__.py        # Package initialization
-│  ├─ main.py            # Main entry point - orchestrates pipeline
-│  ├─ loaders.py         # Data loading functions
-│  ├─ transforms.py      # Data transformation utilities
-│  ├─ plots.py           # Visualization functions
+│  ├─ __init__.py
+│  ├─ main.py                  # Pipeline orchestrator
+│  ├─ loaders.py               # Raw data ingestion
+│  ├─ transforms.py            # Data wrangling & merging
+│  └─ plots.py                 # Visualisation functions
 ├─ .gitignore
 ├─ README.md
-├─ requirements.txt
+└─ requirements.txt
 ```
 
 ## 🚀 Getting Started
@@ -38,7 +53,6 @@ ESI/
 ### Prerequisites
 
 - Python 3.8 or higher
-- pip package manager
 
 ### Installation
 
@@ -48,14 +62,14 @@ ESI/
    cd ESI
    ```
 
-2. **Create and activate virtual environment (recommended):**
+2. **Create and activate a virtual environment (recommended):**
    ```bash
    python -m venv .venv
-   
-   # On Windows:
+
+   # Windows:
    .venv\Scripts\activate
-   
-   # On macOS/Linux:
+
+   # macOS / Linux:
    source .venv/bin/activate
    ```
 
@@ -64,76 +78,96 @@ ESI/
    pip install -r requirements.txt
    ```
 
-### Usage
+### Weighted Composite Economic Stress Index (ESI)
 
-Run the main analysis pipeline:
+The project calculates a single ESI score (0–1) for each year using an equal-weighted average of the normalized indicators.
 
-```bash
-python -m src.main
-```
+**Formula:**
+`ESI = Mean(Norm(Inflation), Norm(Food Inflation), Norm(Unemployment), Norm(Interest Rates), (1 - Norm(GDP Growth)))`
 
-This will:
-1. Load unemployment data from `data/raw/unemployment.csv`
-2. Filter and transform data for India (1991-2024)
-3. Display statistical analysis in the console
-4. Generate visualizations in `outputs/plots/`
+- **Stressors** (Inflation, Unemployment, etc.): Higher values increase stress.
+- **Inverse Stressors** (GDP Growth): Higher values decrease stress.
 
-### Output
+**Interpretation:**
+- **ESI → 1.0**: Indicates severe economic distress (e.g., 1991 crisis).
+- **ESI → 0.0**: Indicates robust economic stability and growth.
 
-**Console Output:**
-- Full unemployment data table (1991-2024)
-- Maximum unemployment year and rate
-- Minimum unemployment year and rate
+The final index is saved to `outputs/tables/esi_index.csv`.
 
-**Generated Files:**
-- `outputs/plots/india_unemployment_line.png` - Time series line plot
-- `outputs/plots/india_unemployment_bar.png` - Bar chart visualization
+### Analytical Intelligence
+The project now includes statistical methods to extract deeper insights without black-box ML:
+1. **Stress Regimes**: Classification of years into Low, Moderate, and High stress based on data quantiles.
+2. **Structural Breaks**: Detection of significant shifts in the stress baseline using first-difference thresholds.
+3. **Sensitivity Analysis**: Verification that the ESI is robust to weight perturbations (±10%).
+
+### Why Machine Learning is Not Used Yet
+1. **Data Volume**: With only ~34 annual data points, complex ML models would severely overfit.
+2. **Interpretability**: Policy analysis requires transparent, defensible logic (e.g., "stress increased because inflation spiked") rather than opaque predictions.
+3. **Baselines First**: We must establish a robust statistical baseline before attempting predictive modeling.
+
+### Generated Outputs
+
+**`outputs/plots/`**
+
+| File | Description |
+|------|-------------|
+| `india_inflation.png` | Inflation rate time series |
+| `india_food_inflation.png` | Food inflation rate time series |
+| `india_unemployment.png` | Unemployment rate time series |
+| `india_gdp_growth.png` | GDP growth rate time series |
+| `india_gdp_growth_bar.png` | GDP growth bar chart |
+| `india_interest_rate.png` | Lending interest rate time series |
+| `india_combined_indicators.png` | Multi-line overlay of all key rates |
+| `india_composite_stress_stacked.png` | Stacked area chart of stress components |
+| `india_esi_score.png` | Composite ESI score over time |
+| `india_esi_high_stress.png` | ESI bar chart highlighting top 5 stress years |
+| `india_esi_vs_indicators.png` | Dual-axis comparison of ESI vs Inflation/Unemployment |
+| `india_esi_regimes.png` | **NEW**: ESI with color-coded stress regimes |
+| `india_esi_change_points.png` | **NEW**: ESI with markers for structural breaks |
+
+**`outputs/tables/`**
+
+| File | Description |
+|------|-------------|
+| `esi_india_1991_2024.csv` | Merged table with all five indicators |
+| `esi_index.csv` | Final ESI scores indexed by year |
+
+## 📦 Module Descriptions
+
+| File | Description |
+|------|-------------|
+| `esi_india_1991_2024.csv` | Merged table with all five indicators |
+| `esi_index.csv` | Final ESI scores indexed by year |
 
 ## 📦 Module Descriptions
 
 | Module | Purpose |
 |--------|---------|
-| `src/loaders.py` | Loads and preprocesses CSV files from `data/raw/` |
-| `src/transforms.py` | Provides reusable data transformation functions (filtering, reshaping, type conversion) |
-| `src/plots.py` | Creates and saves matplotlib visualizations to `outputs/plots/` |
-| `src/main.py` | Orchestrates the complete analysis pipeline |
+| `src/loaders.py` | Loads World Bank CSVs from `data/raw/`, skips 4-row metadata header, drops unnamed columns |
+| `src/transforms.py` | `filter_country`, `wide_to_long`, `merge_indicators`, `normalise_indicators` and more |
+| `src/plots.py` | `plot_time_series`, `plot_bar_chart`, `plot_multi_line`, `plot_composite_stress` |
+| `src/main.py` | Orchestrates the 7-step pipeline end-to-end |
 
-## 🔧 Development
+## 🔧 Extending the Project
 
-### Code Style
+**Adding a new indicator:**
+1. Place the World Bank CSV in `data/raw/`
+2. Add a loader in `src/loaders.py` (one-liner using `_load_world_bank_csv`)
+3. Call `transforms.prepare_indicator()` in `src/main.py`
+4. Add the column to `transforms.merge_indicators()`
 
-- **Modular Design**: Each module has a single, well-defined responsibility
-- **Relative Paths**: All paths are relative to project root for portability
-- **Type Safety**: Functions include type hints and docstrings
-- **Clean Separation**: Data loading, transformation, and visualization are separated
+## 📈 Data Sources
 
-### Extending the Project
-
-**Adding New Data Sources:**
-1. Add new CSV to `data/raw/`
-2. Create loader function in `src/loaders.py`
-3. Integrate into `src/main.py` pipeline
-
-**Adding New Visualizations:**
-1. Create new plot function in `src/plots.py`
-2. Call from `src/main.py` with appropriate data
-
-**Adding New Transformations:**
-1. Add transformation function to `src/transforms.py`
-2. Use in `src/main.py` pipeline
-
-## 📈 Data Source
-
-Unemployment data sourced from [World Bank Open Data](https://data.worldbank.org/).
+All data sourced from [World Bank Open Data](https://data.worldbank.org/).
 
 ## 📝 License
 
-This project is open source and available for educational and research purposes.
+Open source – available for educational and research purposes.
 
 ## 👤 Author
 
-**Siddharth Behera**
-- GitHub: [@siddharthbehera08-collab](https://github.com/siddharthbehera08-collab)
+**Siddharth Behera**  
+GitHub: [@siddharthbehera08-collab](https://github.com/siddharthbehera08-collab)
 
 ---
 
