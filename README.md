@@ -25,3 +25,20 @@ python -m src.main
 ## Outputs
 - `outputs/tables/`: CSV files containing the calculated index and merged data.
 - `outputs/plots/`: Visualizations of the ESI and its components.
+
+## Advanced Analytics
+### Phase 2: Regression Prediction
+Predicts ESI scores using macro-economic indicators (Inflation, Unemployment, GDP, Interest Rates).
+- **Models**: Linear Regression, Random Forest, Gradient Boosting.
+- **Metrics**: RMSE, R².
+
+### Phase 3: Classification & Anomaly Detection
+#### A. Stress Level Classification
+Classifies years into **Low**, **Medium**, or **High** stress based on ESI scores.
+- **Models**: Logistic Regression, Random Forest.
+- **Output**: Confusion matrix, feature importance.
+
+#### B. Crisis Year Detection
+Identifies anomalous economic periods using:
+- **Isolation Forest**: Unsupervised anomaly detection.
+- **Z-Score**: Statistical deviation from the mean (> 2 sigma).

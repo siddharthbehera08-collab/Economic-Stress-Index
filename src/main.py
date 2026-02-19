@@ -289,6 +289,24 @@ def main() -> None:
     print("\nTop 5 Highest Stress Years:")
     print(top_5.to_string(index=False))
 
+    # ── 9. Phase 2A: Regression Pipeline ───────────────────────────────────────
+    from src.models import regression
+    best_model, rmse, r2 = regression.run_regression_pipeline(merged)
+    
+    print("\n[Regression Summary]")
+    print(f"Best Model: {best_model}")
+    print(f"RMSE:       {rmse:.4f}")
+    print(f"R²:         {r2:.4f}")
+
+    # ── 10. Phase 3: Classification & Anomaly Detection ───────────────────────
+    from src.models import classification, anomaly
+    
+    # Classification
+    merged_cls = classification.run_classification_pipeline(merged.copy())
+    
+    # Anomaly Detection
+    analysis_df = anomaly.run_anomaly_detection_pipeline(merged.copy())
+    
     print("\nPipeline complete ✓")
 
 

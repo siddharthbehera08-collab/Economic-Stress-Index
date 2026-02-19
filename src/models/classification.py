@@ -1,0 +1,159 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from pathlib import Path
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, precision_score, recall_score, confusion_matrix
+from sklearn.model_selection import train_test_split
+
+# Output paths
+_PROJECT_ROOT = Path(__file__).parent.parent.parent
+_TABLES_DIR = _PROJECT_ROOT / "outputs" / "tables"
+_PLOTS_DIR = _PROJECT_ROOT / "outputs" / "plots"
+
+def run_classification_pipeline(df: pd.DataFrame):
+    """
+    Executes Part A: Stress Level Classification.
+    Strategies:
+      - Low Stress: ESI bottom 33%
+      - Medium Stress: ESI middle 33%
+      - High Stress: ESI top 33%
+    """
+    print("\n" + "=" * 60)
+    print("  🚦 Part A: Stress Level Classification")
+    print("=" * 60)
+
+    # 1. Feature Engineering
+    df = df.sort_values("Year").reset_index(drop=True)
+    
+    # Create Stress Levels
+    df["stress_level"] = pd.qcut(df["esi_score"], q=3, labels=["Low", "Medium", "High"])
+    
+    # Features
+    feature_cols = ["inflation_rate", "unemployment_rate", "gdp_growth_rate", "interest_rate"]
+    target_col = "stress_level"
+    
+    X = df[feature_cols]
+    y = df[target_col]
+    
+    # Stratified Split (since we want balanced representation of all classes in test)
+    # Using 80/20 split
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, stratify=y, random_state=42
+    )
+    
+    print(f"    Classes: {y.unique().tolist()}")
+    print(f"    Train: {len(X_train)}, Test: {len(X_test)}")
+    
+    # 2. Model Training
+    models = {
+        "LogisticRegression": LogisticRegression(max_iter=1000, random_state=42),
+        "RandomForest": RandomForestClassifier(n_estimators=100, random_state=42)
+    }
+    
+    metrics = []
+    
+    for name, model in models.items():
+        print(f"    Training {name}...")
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
+        
+        acc = accuracy_score(y_test, y_pred)
+        # Macro average for multiclass
+        prec = precision_score(y_test, y_pred, average="macro", zero_division=0)
+        rec = recall_score(y_test, y_pred, average="macro", zero_division=0)
+        
+        metrics.append({
+            "Model": name,
+            "Accuracy": acc,
+            "Precision": prec,
+            "Recall": rec
+        })
+        
+        # Plot Confusion Matrix
+        _plot_confusion_matrix(y_test, y_pred, model.classes_, name)
+        
+        # Feature Importance (RF only)
+        if name == "RandomForest":
+            _plot_feature_importance(model.feature_importances_, feature_cols)
+            
+    metrics_df = pd.DataFrame(metrics)
+    print("\n[Classification Metrics]")
+    print(metrics_df.to_string(index=False))
+    
+    # Save Metrics
+    metrics_path = _TABLES_DIR / "classification_metrics.csv"
+    metrics_df.to_csv(metrics_path, index=False)
+    print(f"    ✓ Metrics saved -> {metrics_path}")
+    
+    # 3. Insights
+    _print_insights(df)
+    
+    # 4. Stress Distribution Plot
+    _plot_stress_distribution(df)
+
+    return df # Return df with 'stress_level' column if needed
+
+def _plot_confusion_matrix(y_true, y_pred, classes, model_name):
+    cm = confusion_matrix(y_true, y_pred, labels=classes)
+    
+    fig, ax = plt.subplots(figsize=(6, 5))
+    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", 
+                xticklabels=classes, yticklabels=classes, ax=ax)
+    
+    ax.set_title(f"Confusion Matrix - {model_name}", fontweight="bold")
+    ax.set_ylabel("Actual")
+    ax.set_xlabel("Predicted")
+    
+    path = _PLOTS_DIR / f"classification_confusion_{model_name.lower()}.png"
+    plt.savefig(path, bbox_inches="tight")
+    plt.close()
+    print(f"    ✓ Plot saved -> {path}")
+
+def _plot_feature_importance(importances, feature_names):
+    fig, ax = plt.subplots(figsize=(8, 5))
+    
+    indices = np.argsort(importances)
+    sorted_features = [feature_names[i] for i in indices]
+    sorted_importances = importances[indices]
+    
+    ax.barh(sorted_features, sorted_importances, color="#2A9D8F")
+    ax.set_title("Feature Importance (Random Forest Classification)", fontweight="bold")
+    ax.set_xlabel("Importance Score")
+    ax.grid(axis="x", linestyle="--", alpha=0.5)
+    
+    path = _PLOTS_DIR / "classification_feature_importance.png"
+    plt.savefig(path, bbox_inches="tight")
+    plt.close()
+    print(f"    ✓ Plot saved -> {path}")
+
+def _plot_stress_distribution(df):
+    fig, ax = plt.subplots(figsize=(8, 5))
+    
+    sns.countplot(data=df, x="stress_level", order=["Low", "Medium", "High"], palette="viridis", ax=ax)
+    
+    ax.set_title("Distribution of Stress Levels (1991-2024)", fontweight="bold")
+    ax.set_xlabel("Stress Level")
+    ax.set_ylabel("Count of Years")
+    ax.grid(axis="y", linestyle="--", alpha=0.5)
+    
+    path = _PLOTS_DIR / "classification_stress_distribution.png"
+    plt.savefig(path, bbox_inches="tight")
+    plt.close()
+    print(f"    ✓ Plot saved -> {path}")
+
+def _print_insights(df):
+    print("\n[Insights]")
+    
+    # Most frequent High Stress years
+    high_stress = df[df["stress_level"] == "High"]
+    print(f"    • Total High Stress Years: {len(high_stress)}")
+    if not high_stress.empty:
+        print(f"    • Recent High Stress Years: {high_stress['Year'].tail(5).tolist()}")
+        
+    # Correlation with High Stress (approximation by checking mean of features for High vs Low)
+    means = df.groupby("stress_level")[["inflation_rate", "unemployment_rate", "gdp_growth_rate", "interest_rate"]].mean()
+    print("\n    • Average Indicators by Stress Level:")
+    print(means.to_string())
