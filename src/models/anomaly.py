@@ -30,14 +30,16 @@ def run_anomaly_detection_pipeline(df: pd.DataFrame):
     # -1 is anomaly, 1 is normal -> Convert to boolean True for anomaly
     df["is_anomaly_iso"] = df["anomaly_iso"] == -1
     
-    # 2. Z-Score
+    # 2. Z-Score — only flag HIGH ESI deviations (stress spikes)
+    # A crisis is an anomalously HIGH stress year, not a low one.
+    # Using directional threshold (z > 2.0) instead of absolute value
+    # so that unusually low-stress years (e.g. 2023-2024) are NOT flagged.
     mean_esi = df["esi_score"].mean()
     std_esi = df["esi_score"].std()
     df["z_score"] = (df["esi_score"] - mean_esi) / std_esi
-    # Flag if absolute Z-score > 2
-    df["is_anomaly_z"] = df["z_score"].abs() > 2.0
+    df["is_anomaly_z"] = df["z_score"] > 2.0  # Directional: high stress only
     
-    # 3. Combined Flag (Crisis Year) if EITHER method flags it
+    # 3. Combined Flag (Crisis Year) if EITHER method flags it as HIGH stress
     df["crisis_year"] = df["is_anomaly_iso"] | df["is_anomaly_z"]
     
     crisis_years = df[df["crisis_year"]]["Year"].tolist()
@@ -69,7 +71,7 @@ def _plot_anomalies(df):
         ax.text(row["Year"], row["esi_score"] + 0.02, str(int(row["Year"])), 
                 ha='center', fontsize=9, color="#D62828", fontweight="bold")
     
-    ax.set_title("Economic Crisis Years Detection (Isolation Forest & Z-Score)", fontweight="bold")
+    ax.set_title("Economic Crisis Spikes (Isolation Forest & Z-Score  |  High Stress Only)", fontweight="bold")
     ax.set_xlabel("Year")
     ax.set_ylabel("ESI Score")
     ax.legend()

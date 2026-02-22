@@ -145,7 +145,13 @@ def main() -> None:
         output_filename="india_gdp_growth_bar.png",
     )
     
-    # ESI Score Plot
+    # ESI Score Plot (with key economic event annotations)
+    _ESI_EVENTS = {
+        1991: "BoP Crisis",
+        1998: "Asian Contagion",
+        2008: "GFC",
+        2020: "COVID-19",
+    }
     plots.plot_time_series(
         df=merged,
         x_col="Year",
@@ -154,6 +160,7 @@ def main() -> None:
         xlabel="Year",
         ylabel="ESI Score (0 = Low Stress, 1 = High Stress)",
         output_filename="india_esi_score.png",
+        annotations=_ESI_EVENTS,
     )
     print("      ✓ Individual and ESI plots saved.")
 

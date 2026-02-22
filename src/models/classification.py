@@ -6,7 +6,7 @@ from pathlib import Path
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, confusion_matrix
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, cross_val_score
 
 # Output paths
 _PROJECT_ROOT = Path(__file__).parent.parent.parent
@@ -16,13 +16,21 @@ _PLOTS_DIR = _PROJECT_ROOT / "outputs" / "plots"
 def run_classification_pipeline(df: pd.DataFrame):
     """
     Executes Part A: Stress Level Classification.
-    Strategies:
-      - Low Stress: ESI bottom 33%
+    
+    Target labels (from ESI quantiles):
+      - Low Stress:    ESI bottom 33%
       - Medium Stress: ESI middle 33%
-      - High Stress: ESI top 33%
+      - High Stress:   ESI top 33%
+
+    Evaluation strategy:
+      - PRIMARY: 5-fold cross-validation (mean ± std accuracy).
+        Used because n=34 annual observations is too small for a single
+        train/test split to be statistically reliable.
+      - SECONDARY: stratified 80/20 split used only for confusion matrix
+        and feature importance visualisation.
     """
     print("\n" + "=" * 60)
-    print("  🚦 Part A: Stress Level Classification")
+    print("  \U0001f6a6 Part A: Stress Level Classification")
     print("=" * 60)
 
     # 1. Feature Engineering
@@ -38,14 +46,14 @@ def run_classification_pipeline(df: pd.DataFrame):
     X = df[feature_cols]
     y = df[target_col]
     
-    # Stratified Split (since we want balanced representation of all classes in test)
-    # Using 80/20 split
+    # Stratified 80/20 split — used for confusion matrix visualisation only
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, stratify=y, random_state=42
     )
     
     print(f"    Classes: {y.unique().tolist()}")
     print(f"    Train: {len(X_train)}, Test: {len(X_test)}")
+    print(f"    Note: 5-fold CV is the primary metric (n=34 is too small for a single split).")
     
     # 2. Model Training
     models = {
@@ -56,20 +64,29 @@ def run_classification_pipeline(df: pd.DataFrame):
     metrics = []
     
     for name, model in models.items():
-        print(f"    Training {name}...")
+        print(f"\n    Training {name}...")
         model.fit(X_train, y_train)
         y_pred = model.predict(X_test)
         
+        # ── PRIMARY: 5-Fold Cross-Validation ─────────────────────────────────
+        cv_scores = cross_val_score(model, X, y, cv=5, scoring="accuracy")
+        cv_mean = cv_scores.mean()
+        cv_std = cv_scores.std()
+        print(f"    ✅ 5-Fold CV Accuracy: {cv_mean:.3f} ± {cv_std:.3f}")
+        print(f"       (fold scores: {[round(s, 3) for s in cv_scores]})")
+        
+        # ── SECONDARY: Single-split metrics (for confusion matrix context) ────
         acc = accuracy_score(y_test, y_pred)
-        # Macro average for multiclass
         prec = precision_score(y_test, y_pred, average="macro", zero_division=0)
         rec = recall_score(y_test, y_pred, average="macro", zero_division=0)
         
         metrics.append({
             "Model": name,
-            "Accuracy": acc,
-            "Precision": prec,
-            "Recall": rec
+            "CV_Mean_Accuracy": round(cv_mean, 4),
+            "CV_Std": round(cv_std, 4),
+            "Split_Accuracy": round(acc, 4),
+            "Split_Precision": round(prec, 4),
+            "Split_Recall": round(rec, 4),
         })
         
         # Plot Confusion Matrix

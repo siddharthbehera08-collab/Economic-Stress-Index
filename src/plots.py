@@ -77,14 +77,36 @@ def plot_time_series(
     xlabel: str,
     ylabel: str,
     output_filename: str | None = None,
+    annotations: "dict[int, str] | None" = None,
 ) -> None:
-    """Line chart for a single indicator over time."""
+    """Line chart for a single indicator over time.
+    
+    Args:
+        annotations: Optional dict mapping {year: event_label} to draw
+                     vertical reference lines with event names on the plot.
+                     Example: {1991: 'BoP Crisis', 2020: 'COVID-19'}
+    """
     color = PALETTE.get(y_col, PALETTE["default"])
 
     fig, ax = plt.subplots(figsize=(11, 5))
     ax.plot(df[x_col], df[y_col], linewidth=2.2, color=color, marker="o",
             markersize=3.5, markerfacecolor="white", markeredgewidth=1.5)
     ax.axhline(0, color="grey", linewidth=0.6, linestyle="--", alpha=0.5)
+
+    # ── Event annotations ────────────────────────────────────────────────────
+    if annotations:
+        y_min, y_max = df[y_col].min(), df[y_col].max()
+        y_range = y_max - y_min if y_max != y_min else 1.0
+        text_y = y_max + y_range * 0.04  # Slightly above the max value
+        for year, label in annotations.items():
+            ax.axvline(x=year, color="#888888", linestyle=":", linewidth=1.4, alpha=0.8)
+            ax.text(
+                year, text_y, label,
+                rotation=90, ha="right", va="bottom",
+                fontsize=8, color="#555555", style="italic",
+            )
+        # Expand y-axis to make room for top labels
+        ax.set_ylim(bottom=y_min - y_range * 0.05, top=text_y + y_range * 0.2)
 
     ax.set_title(title, fontsize=14, fontweight="bold", pad=12)
     ax.set_xlabel(xlabel, fontsize=11)
