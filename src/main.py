@@ -312,8 +312,12 @@ def main() -> None:
     merged_cls = classification.run_classification_pipeline(merged.copy())
     
     # Anomaly Detection
-    analysis_df = anomaly.run_anomaly_detection_pipeline(merged.copy())
-    
+    anomaly.run_anomaly_detection_pipeline(merged.copy())
+
+    # ── 11. Phase 2A: Analytical Intelligence ─────────────────────────────────
+    from src import analysis as _analysis
+    merged = _analysis.run_analysis_pipeline(merged)
+
     print("\nPipeline complete ✓")
 
 

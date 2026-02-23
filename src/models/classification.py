@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
 from pathlib import Path
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
@@ -115,15 +114,29 @@ def run_classification_pipeline(df: pd.DataFrame):
 
 def _plot_confusion_matrix(y_true, y_pred, classes, model_name):
     cm = confusion_matrix(y_true, y_pred, labels=classes)
-    
+
     fig, ax = plt.subplots(figsize=(6, 5))
-    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", 
-                xticklabels=classes, yticklabels=classes, ax=ax)
-    
+    im = ax.imshow(cm, interpolation="nearest", cmap="Blues")
+    fig.colorbar(im, ax=ax)
+
+    tick_marks = np.arange(len(classes))
+    ax.set_xticks(tick_marks)
+    ax.set_xticklabels(classes)
+    ax.set_yticks(tick_marks)
+    ax.set_yticklabels(classes)
+
+    thresh = cm.max() / 2.0
+    for i in range(cm.shape[0]):
+        for j in range(cm.shape[1]):
+            ax.text(j, i, str(cm[i, j]),
+                    ha="center", va="center",
+                    color="white" if cm[i, j] > thresh else "black")
+
     ax.set_title(f"Confusion Matrix - {model_name}", fontweight="bold")
     ax.set_ylabel("Actual")
     ax.set_xlabel("Predicted")
-    
+    fig.tight_layout()
+
     path = _PLOTS_DIR / f"classification_confusion_{model_name.lower()}.png"
     plt.savefig(path, bbox_inches="tight")
     plt.close()
@@ -148,14 +161,18 @@ def _plot_feature_importance(importances, feature_names):
 
 def _plot_stress_distribution(df):
     fig, ax = plt.subplots(figsize=(8, 5))
-    
-    sns.countplot(data=df, x="stress_level", order=["Low", "Medium", "High"], palette="viridis", ax=ax)
-    
+
+    order = ["Low", "Medium", "High"]
+    colors = ["#A7C957", "#F4E409", "#F08080"]
+    counts = [df["stress_level"].value_counts().get(lbl, 0) for lbl in order]
+    ax.bar(order, counts, color=colors, alpha=0.85, width=0.5)
+
     ax.set_title("Distribution of Stress Levels (1991-2024)", fontweight="bold")
     ax.set_xlabel("Stress Level")
     ax.set_ylabel("Count of Years")
     ax.grid(axis="y", linestyle="--", alpha=0.5)
-    
+    fig.tight_layout()
+
     path = _PLOTS_DIR / "classification_stress_distribution.png"
     plt.savefig(path, bbox_inches="tight")
     plt.close()

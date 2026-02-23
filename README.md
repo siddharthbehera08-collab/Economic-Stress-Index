@@ -132,3 +132,43 @@ Identifies anomalously high-stress years using two independent methods:
 - **Isolation Forest**: Unsupervised; detects global outliers in ESI distribution
 - **Z-Score (directional)**: Flags years where ESI > mean + 2σ (high stress only — low-stress years are not treated as crises)
 - A year is flagged as a crisis only if **at least one method** identifies it as a high-stress outlier
+
+---
+
+### Analytical Intelligence (Phase 2A)
+
+Applies statistical smoothing and regime-aware analysis to the ESI time series — no ML models, pure analytics.
+
+#### Rolling Averages
+
+3-year and 5-year centred rolling means are computed and overlaid on the ESI line chart (`india_esi_rolling_avg.png`). Rolling averages smooth out annual noise and reveal medium-term stress trends — the 5-year average in particular highlights structural economic phases such as the post-liberalisation adjustment (1991–1996) and the post-GFC stabilisation.
+
+#### Stress Regime Classification
+
+Each year is classified into one of three stress regimes using **tertile thresholds** (data-driven):
+
+| Regime | Threshold |
+|---|---|
+| Low Stress | Bottom 33 % of ESI scores |
+| Medium Stress | Middle 33 % |
+| High Stress | Top 33 % |
+
+The color-coded ESI timeline (`india_esi_regime_timeline.png`) renders each year's dot in the regime's colour, making structural shifts immediately visible.
+
+#### Regime Transition Detection
+
+Year-over-year regime changes are detected and printed to the console (e.g., `2008: Low Stress → High Stress`). This surfaces the speed and frequency of economic regime shifts — a critical signal for policy analysis.
+
+#### Console Insights
+
+Two analytical facts are printed at the end of the pipeline:
+
+- **Longest High-Stress Streak** — the maximum number of consecutive years classified as High Stress (with the year range).
+- **Most Volatile Decade** — the 10-year window with the highest ESI standard deviation, indicating where economic conditions were most unstable.
+
+#### New Output Files
+
+| File | Description |
+|---|---|
+| `outputs/plots/india_esi_rolling_avg.png` | ESI with 3-yr and 5-yr rolling averages overlaid |
+| `outputs/plots/india_esi_regime_timeline.png` | Color-coded ESI timeline by stress regime |
