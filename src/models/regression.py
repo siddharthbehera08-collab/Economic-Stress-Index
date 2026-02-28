@@ -1,56 +1,52 @@
+"""
+regression.py
+-------------
+Phase 2A: Regression Analysis (Explanatory).
+Examines relations between ESI and underlying indicators using various regression methods.
+"""
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
-from pathlib import Path
 from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 
-# Output paths
-_PROJECT_ROOT = Path(__file__).parent.parent.parent
-_TABLES_DIR = _PROJECT_ROOT / "outputs" / "tables"
-_PLOTS_DIR = _PROJECT_ROOT / "outputs" / "plots"
+from src.config import PLOTS_DIR, TABLES_DIR
 
-def run_regression_pipeline(df: pd.DataFrame):
+def run_regression_pipeline(df: pd.DataFrame) -> tuple[str, float, float]:
     """
-    Executes Phase 2A: Regression Analysis (Explanatory, not Predictive).
-
-    NOTE on Linear Regression R²≈1.0:
-    ESI is a deterministic, equal-weighted mean of Min-Max normalized indicators.
-    Linear Regression can algebraically reconstruct this formula from the raw
-    (un-normalized) inputs, yielding near-perfect accuracy. This is expected
-    and serves as a formula consistency check — confirming the ESI components
-    are correctly encoded. It is NOT a case of overfitting or data leakage
-    in the traditional sense: no future information is used.
-
-    Random Forest and Gradient Boosting are included as genuine comparisons;
-    their lower performance on a 7-sample test set reflects the fundamental
-    limitation of only 34 annual observations.
+    Executes explanatory Regression Analysis on the composite ESI.
+    
+    Note: Linear Regression reconstructs ESI from its raw components,
+    which acts as a formula consistency check. Tree models act as comparisons.
+    
+    Args:
+        df: Macroeconomic DataFrame containing ESI and indicator components.
+        
+    Returns:
+        A tuple of (Best Model Name, RMSE, R² Value).
     """
     print("\n" + "=" * 60)
     print("  📈 Phase 2A: Regression Analysis (Explanatory)")
     print("=" * 60)
-    print("    ℹ️  Note: Linear Regression reconstructs ESI from its components")
-    print("       (formula consistency check). Tree models are genuinely predictive.")
+    print("    ℹ️  Note: Linear Regression reconstructs ESI to test formula consistency.")
 
-    # 1. Feature Engineering
-    # All 5 ESI components used as features so the explanatory analysis is complete.
-    # food_inflation_rate is included because it is a direct ESI component.
+    # 1. Feature Engineering (Include all key stressors influencing the ESI)
     feature_cols = [
         "inflation_rate", "food_inflation_rate",
         "unemployment_rate", "gdp_growth_rate", "interest_rate"
     ]
     target_col = "esi_score"
     
-    # Ensure year is sorted for time-series split
     df = df.sort_values("Year").reset_index(drop=True)
     
     X = df[feature_cols]
     y = df[target_col]
     years = df["Year"]
 
-    # 2. Train-Test Split (80/20 Time-Aware)
+    # 2. Time-Aware Train-Test Split (80/20)
     split_idx = int(len(df) * 0.8)
     X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
     y_train, y_test = y.iloc[:split_idx], y.iloc[split_idx:]
@@ -58,7 +54,7 @@ def run_regression_pipeline(df: pd.DataFrame):
     
     print(f"    Data Split: Train ({len(X_train)}), Test ({len(X_test)})")
     
-    # 3. Model Training
+    # 3. Model Training Options
     models = {
         "LinearRegression": LinearRegression(),
         "RandomForest": RandomForestRegressor(n_estimators=100, random_state=42),
@@ -85,6 +81,7 @@ def run_regression_pipeline(df: pd.DataFrame):
         trained_models[name] = model
         predictions[name] = y_pred
 
+    # Determine best model based on root mean square error (RMSE)
     metrics_df = pd.DataFrame(metrics).sort_values("RMSE")
     best_model_name = metrics_df.iloc[0]["Model"]
     best_model = trained_models[best_model_name]
@@ -93,27 +90,24 @@ def run_regression_pipeline(df: pd.DataFrame):
     print("\n[Evaluation Metrics]")
     print(metrics_df.to_string(index=False))
 
-    # Save metrics
-    metrics_path = _TABLES_DIR / "model_metrics.csv"
+    # Save tracking logic
+    metrics_path = TABLES_DIR / "model_metrics.csv"
     metrics_df.to_csv(metrics_path, index=False)
     print(f"\n    ✓ Metrics saved -> {metrics_path}")
     
-    # 4. Plots
-    
-    # Actual vs Predicted (Best Model)
+    # 4. Generate Visualizations
     _plot_actual_vs_predicted(years_test, y_test, best_preds, best_model_name)
     
-    # Residuals vs Year
     residuals = y_test - best_preds
     _plot_residuals(years_test, residuals, best_model_name)
     
-    # Feature Importance (if applicable)
     if hasattr(best_model, "feature_importances_"):
         _plot_feature_importance(best_model.feature_importances_, feature_cols, best_model_name)
 
     return best_model_name, metrics_df.iloc[0]["RMSE"], metrics_df.iloc[0]["R2"]
 
-def _plot_actual_vs_predicted(years, y_true, y_pred, model_name):
+def _plot_actual_vs_predicted(years, y_true, y_pred, model_name: str) -> None:
+    """Plots the test data predictions against actuals."""
     fig, ax = plt.subplots(figsize=(10, 5))
     ax.plot(years, y_true, "o-", label="Actual ESI", color="#1D3557", linewidth=2)
     ax.plot(years, y_pred, "x--", label=f"Predicted ({model_name})", color="#E63946", linewidth=2)
@@ -124,15 +118,14 @@ def _plot_actual_vs_predicted(years, y_true, y_pred, model_name):
     ax.legend()
     ax.grid(True, linestyle="--", alpha=0.5)
     
-    # Integer years
     ax.xaxis.set_major_locator(mticker.MaxNLocator(integer=True))
     
-    path = _PLOTS_DIR / "regression_actual_vs_predicted.png"
+    path = PLOTS_DIR / "regression_actual_vs_predicted.png"
     plt.savefig(path, bbox_inches="tight")
     plt.close()
-    print(f"    ✓ Plot saved -> {path}")
 
-def _plot_residuals(years, residuals, model_name):
+def _plot_residuals(years, residuals, model_name: str) -> None:
+    """Plots the prediction residuals over time."""
     fig, ax = plt.subplots(figsize=(10, 5))
     ax.bar(years, residuals, color="#457B9D", alpha=0.7)
     ax.axhline(0, color="black", linewidth=0.8)
@@ -144,15 +137,14 @@ def _plot_residuals(years, residuals, model_name):
     
     ax.xaxis.set_major_locator(mticker.MaxNLocator(integer=True))
     
-    path = _PLOTS_DIR / "regression_residuals.png"
+    path = PLOTS_DIR / "regression_residuals.png"
     plt.savefig(path, bbox_inches="tight")
     plt.close()
-    print(f"    ✓ Plot saved -> {path}")
 
-def _plot_feature_importance(importances, feature_names, model_name):
+def _plot_feature_importance(importances, feature_names, model_name: str) -> None:
+    """Plots relative feature importances for ensemble models."""
     fig, ax = plt.subplots(figsize=(8, 5))
     
-    # Sort
     indices = np.argsort(importances)
     sorted_features = [feature_names[i] for i in indices]
     sorted_importances = importances[indices]
@@ -162,7 +154,6 @@ def _plot_feature_importance(importances, feature_names, model_name):
     ax.set_xlabel("Importance Score")
     ax.grid(axis="x", linestyle="--", alpha=0.5)
     
-    path = _PLOTS_DIR / "regression_feature_importance.png"
+    path = PLOTS_DIR / "regression_feature_importance.png"
     plt.savefig(path, bbox_inches="tight")
     plt.close()
-    print(f"    ✓ Plot saved -> {path}")

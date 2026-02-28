@@ -1,21 +1,38 @@
-# Virtual environments
-.venv/
-venv/
-env/
-
 # Python
 __pycache__/
-*.pyc
+*.py[cod]
 *$py.class
-.ipynb_checkpoints/
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# IDE
+# Virtual Environment
+venv/
+.venv/
+env/
+.env/
+
+# IDE Settings
 .idea/
 .vscode/
 
-# OS
-.DS_Store
-Thumbs.db
-
-# Data files
-data/raw/*.csv
+# Project Specific
+data/processed/
+outputs/
+data/raw/brent_crude.csv

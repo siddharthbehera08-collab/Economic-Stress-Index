@@ -1,21 +1,32 @@
+"""
+anomaly.py
+----------
+Part B: Anomaly Detection (Crisis Years).
+Detects abnormally high stress years using statistical methods (Z-Score) 
+and machine learning (Isolation Forest).
+"""
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
-from pathlib import Path
 from sklearn.ensemble import IsolationForest
 
-# Output paths
-_PROJECT_ROOT = Path(__file__).parent.parent.parent
-_TABLES_DIR = _PROJECT_ROOT / "outputs" / "tables"
-_PLOTS_DIR = _PROJECT_ROOT / "outputs" / "plots"
+from src.config import PLOTS_DIR, TABLES_DIR
 
-def run_anomaly_detection_pipeline(df: pd.DataFrame):
+def run_anomaly_detection_pipeline(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Executes Part B: Anomaly Detection (Crisis Years).
+    Executes the Anomaly Detection pipeline to flag Crisis Years.
+    
     Strategies:
       - Isolation Forest (Global anomaly detection)
-      - Z-Score (Deviation from mean)
+      - Z-Score (High deviation from the mean)
+      
+    Args:
+        df: The normalized macroeconomic DataFrame.
+        
+    Returns:
+        DataFrame with anomaly flags and combined crisis labels.
     """
     print("\n" + "=" * 60)
     print("  🚨 Part B: Anomaly Detection (Crisis Years)")
@@ -23,46 +34,47 @@ def run_anomaly_detection_pipeline(df: pd.DataFrame):
     
     df = df.sort_values("Year").reset_index(drop=True)
     
-    # 1. Isolation Forest
+    # 1. Isolation Forest Method
     X = df[["esi_score"]]
     iso = IsolationForest(contamination=0.1, random_state=42)
     df["anomaly_iso"] = iso.fit_predict(X)
-    # -1 is anomaly, 1 is normal -> Convert to boolean True for anomaly
+    
+    # IF returns -1 for anomaly, 1 for normal. Convert to boolean True for anomaly.
     df["is_anomaly_iso"] = df["anomaly_iso"] == -1
     
-    # 2. Z-Score — only flag HIGH ESI deviations (stress spikes)
-    # A crisis is an anomalously HIGH stress year, not a low one.
-    # Using directional threshold (z > 2.0) instead of absolute value
-    # so that unusually low-stress years (e.g. 2023-2024) are NOT flagged.
+    # 2. Z-Score Method (Directional)
+    # Only checks for anomalously HIGH stress years (z > 2.0).
     mean_esi = df["esi_score"].mean()
     std_esi = df["esi_score"].std()
-    df["z_score"] = (df["esi_score"] - mean_esi) / std_esi
-    df["is_anomaly_z"] = df["z_score"] > 2.0  # Directional: high stress only
     
-    # 3. Combined Flag (Crisis Year) if EITHER method flags it as HIGH stress
+    df["z_score"] = (df["esi_score"] - mean_esi) / std_esi
+    df["is_anomaly_z"] = df["z_score"] > 2.0
+    
+    # 3. Combined Logic
+    # Flag as a Crisis Year if EITHER method flags it.
     df["crisis_year"] = df["is_anomaly_iso"] | df["is_anomaly_z"]
     
     crisis_years = df[df["crisis_year"]]["Year"].tolist()
     print(f"\n    ⚠️  Detected Crisis Years ({len(crisis_years)}): {crisis_years}")
     
-    # 4. Plots
+    # 4. Generate Visualizations and Save Logs
     _plot_anomalies(df)
     _plot_anomaly_frequency(df)
 
-    # Save details
-    anomaly_path = _TABLES_DIR / "anomaly_detection.csv"
+    anomaly_path = TABLES_DIR / "anomaly_detection.csv"
     df[["Year", "esi_score", "z_score", "crisis_year"]].to_csv(anomaly_path, index=False)
     print(f"    ✓ Anomalies saved -> {anomaly_path}")
 
     return df
 
-def _plot_anomalies(df):
+def _plot_anomalies(df: pd.DataFrame) -> None:
+    """Generates a timeline plot marking detected crisis years."""
     fig, ax = plt.subplots(figsize=(12, 6))
     
-    # Plot ESI Line
+    # Plot standard ESI Area Line
     ax.plot(df["Year"], df["esi_score"], color="#1D3557", linewidth=2, label="ESI Score")
     
-    # Highlight Anomalies
+    # Highlight explicitly detected anomalies
     anomalies = df[df["crisis_year"]]
     ax.scatter(anomalies["Year"], anomalies["esi_score"], color="#D62828", 
                s=100, label="Detected Crisis", zorder=5, marker="X")
@@ -71,7 +83,7 @@ def _plot_anomalies(df):
         ax.text(row["Year"], row["esi_score"] + 0.02, str(int(row["Year"])), 
                 ha='center', fontsize=9, color="#D62828", fontweight="bold")
     
-    ax.set_title("Economic Crisis Spikes (Isolation Forest & Z-Score  |  High Stress Only)", fontweight="bold")
+    ax.set_title("Economic Crisis Spikes (High Stress Only)", fontweight="bold")
     ax.set_xlabel("Year")
     ax.set_ylabel("ESI Score")
     ax.legend()
@@ -79,13 +91,12 @@ def _plot_anomalies(df):
     
     ax.xaxis.set_major_locator(mticker.MaxNLocator(integer=True))
     
-    path = _PLOTS_DIR / "anomaly_detection_timeline.png"
+    path = PLOTS_DIR / "anomaly_detection_timeline.png"
     plt.savefig(path, bbox_inches="tight")
     plt.close()
-    print(f"    ✓ Plot saved -> {path}")
 
-def _plot_anomaly_frequency(df):
-    # Just a simple bar chart showing Anomaly vs Normal count
+def _plot_anomaly_frequency(df: pd.DataFrame) -> None:
+    """Generates a simple bar chart of normal vs crisis year counts."""
     counts = df["crisis_year"].value_counts()
     
     fig, ax = plt.subplots(figsize=(6, 5))
@@ -97,7 +108,6 @@ def _plot_anomaly_frequency(df):
     ax.set_ylabel("Number of Years")
     ax.grid(axis="y", linestyle="--", alpha=0.5)
     
-    path = _PLOTS_DIR / "anomaly_frequency.png"
+    path = PLOTS_DIR / "anomaly_frequency.png"
     plt.savefig(path, bbox_inches="tight")
     plt.close()
-    print(f"    ✓ Plot saved -> {path}")
