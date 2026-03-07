@@ -1,0 +1,11 @@
+
+
+ERROR: No module named 'matplotlib'
+Traceback (most recent call last):
+  File "C:\Users\LENOVO\OneDrive\Desktop\New project\ESI\run_pipeline.py", line 11, in <module>
+    from src.main import main
+  File "C:\Users\LENOVO\OneDrive\Desktop\New project\ESI\src\main.py", line 15, in <module>
+    from src.models.individual_trainer import train_individual_models
+  File "C:\Users\LENOVO\OneDrive\Desktop\New project\ESI\src\models\individual_trainer.py", line 10, in <module>
+    import matplotlib
+ModuleNotFoundError: No module named 'matplotlib'

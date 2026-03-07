@@ -1,40 +1,33 @@
 """
-esi.py
-------
-Logic for calculating the composite Economic Stress Index (ESI).
+esi.py  –  Computes the composite ESI score and stress-level labels.
+All inputs must be normalised (0-1) and direction-adjusted (higher = more stress).
 """
-
 import pandas as pd
 
-def calculate_esi(df_norm: pd.DataFrame, positive_stressors: list[str], inverse_stressors: list[str]) -> pd.Series:
-    """
-    Calculates the composite Economic Stress Index (ESI) as an equal-weighted mean.
-    
-    Formula:
-        (Sum of positive stressors + Sum of (1 - inverse stressors)) / Total components
-        
-    Args:
-        df_norm: Min-max normalized DataFrame.
-        positive_stressors: List of column names that directly increase stress (e.g. inflation).
-        inverse_stressors: List of column names that decrease stress (e.g. GDP growth).
-        
-    Returns:
-        A pandas Series containing the calculated ESI scores (0 to 1).
-    """
-    total_components = len(positive_stressors) + len(inverse_stressors)
-    
-    if total_components == 0:
-        raise ValueError("No stressors provided for ESI calculation.")
 
-    weighted_sum = 0.0
-    
-    # Add direct stressors (higher value = more stress)
-    for col in positive_stressors:
-        weighted_sum += df_norm[col]
-        
-    # Add inverse stressors (lower value = more stress)
-    for col in inverse_stressors:
-        weighted_sum += (1.0 - df_norm[col])
-        
-    # Equal-weighted average
-    return weighted_sum / total_components
+def calculate_esi(stress_df: pd.DataFrame, indicator_cols: list,
+                  weights: dict = None) -> pd.Series:
+    """Weighted average of stress indicators. Equal weights if none provided."""
+    available = [c for c in indicator_cols if c in stress_df.columns]
+    missing   = [c for c in indicator_cols if c not in stress_df.columns]
+    if missing:
+        print(f"  ! ESI: skipping missing columns: {missing}")
+    if not available:
+        raise ValueError("No valid indicator columns found to compute ESI.")
+
+    if weights is None:
+        w = {col: 1.0 / len(available) for col in available}
+    else:
+        raw = {col: weights.get(col, 1.0) for col in available}
+        total = sum(raw.values())
+        w = {col: v / total for col, v in raw.items()}
+
+    esi = sum(stress_df[col] * w[col] for col in available)
+    esi.name = "esi_score"
+    return esi
+
+
+def label_stress_levels(esi_series: pd.Series) -> pd.Series:
+    """Tertile-based Low / Medium / High labels."""
+    p33, p67 = esi_series.quantile(0.33), esi_series.quantile(0.67)
+    return esi_series.map(lambda v: "Low" if v <= p33 else ("Medium" if v <= p67 else "High"))

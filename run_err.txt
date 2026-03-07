@@ -1,0 +1,16 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\LENOVO\OneDrive\Desktop\New project\ESI\src\main.py", line 100, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\LENOVO\OneDrive\Desktop\New project\ESI\src\main.py", line 52, in main
+    ind_results = {k: train_individual_models(k, df) for k, df in india_featured.items()}
+                      ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "C:\Users\LENOVO\OneDrive\Desktop\New project\ESI\src\models\individual_trainer.py", line 30, in train_individual_models
+    results["regression"]     = _regression(indicator_key, df, value_col, label)
+                                ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\LENOVO\OneDrive\Desktop\New project\ESI\src\models\individual_trainer.py", line 46, in _regression
+    "GradientBoosting": GradientBoostingRegressor(200, random_state=RANDOM_STATE)}
+                        ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: GradientBoostingRegressor.__init__() takes 1 positional argument but 2 positional arguments (and 1 keyword-only argument) were given

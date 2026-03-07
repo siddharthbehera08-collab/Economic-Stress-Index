@@ -1,0 +1,27 @@
+============================================================
+  ESI Pipeline – India  (1991-2024)
+============================================================
+
+[1/5] Loading raw CSVs ...
+  + Loaded  [inflation]  shape=(9044, 4)
+  + Loaded  [food_inflation]  shape=(9044, 4)
+  + Loaded  [unemployment]  shape=(306, 4)
+  + Loaded  [interest_rate]  shape=(306, 4)
+  + Loaded  [gdp_growth]  shape=(9044, 4)
+  + Loaded  [oil]  shape=(13832, 4)
+
+[2/5] Filtering to India + building features ...
+  + inflation            years=34  feat_rows=31
+  + food_inflation       years=34  feat_rows=31
+  + unemployment         years=34  feat_rows=31
+  + interest_rate        years=34  feat_rows=31
+  + gdp_growth           years=34  feat_rows=31
+  + oil                  years=34  feat_rows=31
+
+[3/5] Training INDIVIDUAL models ...
+
+============================================================
+  Individual Models: Inflation Rate (%)
+============================================================
+
+  [REG] Predicting inflation_rate
