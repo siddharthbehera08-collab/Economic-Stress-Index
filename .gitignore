@@ -39,5 +39,4 @@ env.bak/
 venv.bak/
 
 # Project specifics
-data/raw/
 *.log
